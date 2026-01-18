@@ -32,6 +32,17 @@ public class UserController {
         this.jwtService = jwtService; // Proper initialization
     }
 
+    @GetMapping
+    public ResponseEntity<java.util.List<AppUser>> allUsers() {
+        try {
+            java.util.List<AppUser> users = userService.allUsers();
+            return ResponseEntity.ok(users);
+        } catch (Exception e) {
+            logger.error("Error fetching all users", e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
     @PatchMapping("/me")
     public ResponseEntity<?> updateCurrentUser(@RequestBody UpdateUserDto updateDto) {
         try {
@@ -41,7 +52,6 @@ public class UserController {
             }
 
             AppUser currentUser = (AppUser) authentication.getPrincipal();
-            
 
             AppUser updatedUser = userService.updateUser(
                     currentUser.getId(),
@@ -70,7 +80,6 @@ public class UserController {
     public ResponseEntity<AppUser> authenticatedUser() {
         logger.info("Entering authenticatedUser() endpoint");
 
-       
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication == null) {
@@ -128,5 +137,4 @@ public class UserController {
         }
     }
 
-  
 }
