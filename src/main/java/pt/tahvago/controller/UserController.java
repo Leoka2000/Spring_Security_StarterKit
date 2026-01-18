@@ -25,11 +25,11 @@ import pt.tahvago.service.UserService;
 public class UserController {
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
     private final UserService userService;
-    private final JwtService jwtService;
+    private final JwtService jwtService; // Correct type
 
     public UserController(UserService userService, JwtService jwtService) {
         this.userService = userService;
-        this.jwtService = jwtService;
+        this.jwtService = jwtService; // Proper initialization
     }
 
     @PatchMapping("/me")
@@ -41,12 +41,14 @@ public class UserController {
             }
 
             AppUser currentUser = (AppUser) authentication.getPrincipal();
+            
 
             AppUser updatedUser = userService.updateUser(
                     currentUser.getId(),
                     updateDto.getUsername(),
                     updateDto.getEmail());
 
+            // Now jwtService is properly available
             String newToken = jwtService.generateToken(updatedUser);
 
             return ResponseEntity.ok()
@@ -66,20 +68,38 @@ public class UserController {
 
     @GetMapping("/me")
     public ResponseEntity<AppUser> authenticatedUser() {
+        logger.info("Entering authenticatedUser() endpoint");
+
+       
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication == null) {
+            logger.error("Authentication object is null - no authentication information available");
             return ResponseEntity.status(401).build();
         }
 
+        logger.debug("Authentication object: {}", authentication);
+        logger.debug("Authentication principal class: {}",
+                authentication.getPrincipal() != null ? authentication.getPrincipal().getClass().getName() : "null");
+        logger.debug("Authentication name: {}", authentication.getName());
+        logger.debug("Authentication authorities: {}", authentication.getAuthorities());
+        logger.debug("Authentication is authenticated: {}", authentication.isAuthenticated());
+
         try {
             AppUser currentUser = (AppUser) authentication.getPrincipal();
+            logger.info("Successfully retrieved authenticated user: {}", currentUser.getUsername());
+            logger.debug("Full user details: {}", currentUser);
+
             return ResponseEntity.ok(currentUser);
         } catch (ClassCastException e) {
+            logger.error("Principal is not of type AppUser. Actual type: {}",
+                    authentication.getPrincipal().getClass().getName(), e);
             return ResponseEntity.status(403).build();
         } catch (Exception e) {
+            logger.error("Unexpected error while retrieving authenticated user", e);
             return ResponseEntity.internalServerError().build();
         }
+
     }
 
     @PatchMapping("/me/password")
@@ -107,4 +127,6 @@ public class UserController {
             return ResponseEntity.internalServerError().body(Map.of("error", "Failed to change password"));
         }
     }
+
+  
 }

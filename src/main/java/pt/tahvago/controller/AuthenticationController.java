@@ -1,5 +1,7 @@
 package pt.tahvago.controller;
 
+import java.util.Map;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -9,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.servlet.http.HttpServletRequest;
+import pt.tahvago.dto.ForgotPasswordDto;
 import pt.tahvago.dto.LoginResponse;
 import pt.tahvago.dto.LoginUserDto;
 import pt.tahvago.dto.RegisterUserDto;
@@ -28,6 +31,16 @@ public class AuthenticationController {
     public AuthenticationController(JwtService jwtService, AuthenticationService authenticationService) {
         this.jwtService = jwtService;
         this.authenticationService = authenticationService;
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordDto dto) {
+        try {
+            authenticationService.forgotPassword(dto.getEmail());
+            return ResponseEntity.ok(Map.of("message", "Reset email sent successfully"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 
     @PostMapping("/signup")
@@ -53,7 +66,7 @@ public class AuthenticationController {
             AppUser authenticatedUser = authenticationService.authenticate(loginUserDto, clientIp);
             String jwtToken = jwtService.generateToken(authenticatedUser);
             LoginResponse loginResponse = new LoginResponse(jwtToken, jwtService.getExpirationTime());
-            
+
             return ResponseEntity.ok(loginResponse);
 
         } catch (RuntimeException e) {

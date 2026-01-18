@@ -1,5 +1,6 @@
 package pt.tahvago.service;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
@@ -34,8 +35,7 @@ public class AuthenticationService {
             UserRepository userRepository,
             AuthenticationManager authenticationManager,
             PasswordEncoder passwordEncoder,
-            EmailService emailService
-    ) {
+            EmailService emailService) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
@@ -58,6 +58,44 @@ public class AuthenticationService {
         return userRepository.save(user);
     }
 
+    public void forgotPassword(String email) {
+        AppUser user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found with this email"));
+
+        String resetString = generateRandomString(16);
+        user.setVerificationCode(resetString);
+        user.setVerificationCodeExpiresAt(LocalDateTime.now().plusMinutes(30));
+        userRepository.save(user);
+
+        sendResetPasswordEmail(user.getEmail(), resetString);
+    }
+
+    private String generateRandomString(int length) {
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        SecureRandom random = new SecureRandom();
+        StringBuilder sb = new StringBuilder(length);
+        for (int i = 0; i < length; i++) {
+            sb.append(chars.charAt(random.nextInt(chars.length())));
+        }
+        return sb.toString();
+    }
+
+    private void sendResetPasswordEmail(String email, String resetString) {
+        String resetLink = "http://localhost:4200/reset-password/" + resetString;
+        String subject = "Password Reset Request";
+        String htmlMessage = "<html><body>"
+                + "<h3>Password Reset</h3>"
+                + "<p>Click the link below to reset your password. This link expires in 30 minutes:</p>"
+                + "<a href=\"" + resetLink + "\">Reset Password</a>"
+                + "</body></html>";
+
+        try {
+            emailService.sendVerificationEmail(email, subject, htmlMessage);
+        } catch (MessagingException e) {
+            e.printStackTrace();
+        }
+    }
+
     public AppUser authenticate(LoginUserDto input, String clientIp) {
         if (isBlocked(clientIp)) {
             throw new RuntimeException("Too many attempts. Please wait 1 minute.");
@@ -74,9 +112,7 @@ public class AuthenticationService {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
                             input.getEmail(),
-                            input.getPassword()
-                    )
-            );
+                            input.getPassword()));
 
             lockoutCache.remove(clientIp);
             return user;
@@ -89,7 +125,8 @@ public class AuthenticationService {
 
     private boolean isBlocked(String ip) {
         LockoutInfo info = lockoutCache.get(ip);
-        if (info == null) return false;
+        if (info == null)
+            return false;
 
         if (info.attempts >= MAX_ATTEMPTS) {
             if (LocalDateTime.now().isBefore(info.lockoutEndTime)) {

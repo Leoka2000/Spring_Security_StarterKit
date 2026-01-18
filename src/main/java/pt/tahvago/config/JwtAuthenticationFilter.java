@@ -39,6 +39,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     @Override
+    protected boolean shouldNotFilter(@NonNull HttpServletRequest request) throws ServletException {
+        String path = request.getServletPath();
+        return path.equals("/users/forgot-password") ||
+                path.startsWith("/auth/") ||
+                path.startsWith("/api/auth/");
+    }
+
+    @Override
     protected void doFilterInternal(
             @NonNull HttpServletRequest request,
             @NonNull HttpServletResponse response,
@@ -49,7 +57,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         final String authHeader = request.getHeader("Authorization");
         logger.debug("Authorization header: {}", authHeader);
 
-        // Header check
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             logger.warn("No Bearer token found in Authorization header");
             filterChain.doFilter(request, response);
@@ -58,8 +65,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         try {
             final String jwt = authHeader.substring(7);
-            logger.debug("Extracted JWT token: {}", jwt.substring(0, Math.min(jwt.length(), 10)) + "..."); // Log first
-                                                                                                           // 10 chars
+            logger.debug("Extracted JWT token: {}", jwt.substring(0, Math.min(jwt.length(), 10)) + "...");
 
             final String userEmail = jwtService.extractUsername(jwt);
             final Long userId = jwtService.extractClaim(jwt, claims -> claims.get("userId", Long.class));
@@ -72,8 +78,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (userEmail != null && authentication == null) {
                 logger.debug("Attempting to load user details for: {}", userEmail);
                 UserDetails userDetails = this.userDetailsService.loadUserByUsername(
-                        userId.toString() // Now using ID instead of email
-                );
+                        userId.toString());
                 logger.debug("Loaded user details: {}", userDetails.getUsername());
 
                 if (jwtService.isTokenValid(jwt, userDetails)) {

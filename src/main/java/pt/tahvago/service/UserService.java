@@ -1,5 +1,7 @@
 package pt.tahvago.service;
 
+import java.security.SecureRandom;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -66,5 +68,33 @@ public class UserService {
 
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
-    } 
+    }
+
+    public void requestPasswordReset(String email) {
+        AppUser user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Email not found"));
+
+        String resetCode = generateRandomString(16);
+        user.setVerificationCode(resetCode);
+        user.setVerificationCodeExpiresAt(LocalDateTime.now().plusMinutes(30));
+        userRepository.save(user);
+
+        sendResetEmail(user.getEmail(), resetCode);
+    }
+
+    private String generateRandomString(int length) {
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        SecureRandom random = new SecureRandom();
+        StringBuilder sb = new StringBuilder(length);
+        for (int i = 0; i < length; i++) {
+            sb.append(chars.charAt(random.nextInt(chars.length())));
+        }
+        return sb.toString();
+    }
+
+    private void sendResetEmail(String email, String code) {
+        String resetLink = "http://localhost:4200/reset-password/" + code;
+        System.out.println("Sending email to: " + email);
+        System.out.println("Reset Link: " + resetLink);
+    }
 }
