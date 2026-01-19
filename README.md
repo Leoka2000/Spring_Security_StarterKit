@@ -4,7 +4,7 @@ This repository contains a Spring Boot 17 backend implementation focusing on sec
 
 ---
 
-## 🚀 Getting Started
+##  Getting Started
 
 ### Prerequisites
 * **Java 17**
