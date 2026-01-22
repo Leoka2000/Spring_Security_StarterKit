@@ -1,3 +1,6 @@
+
+![Authentication Flow](auth-image.png)
+
 # Documentation of basic auth implementations I use as a base for my spring boot apps
 
 A  Spring Boot 17 backend implementation focusing on secure user lifecycles, JWT-based authentication, and email verification.
